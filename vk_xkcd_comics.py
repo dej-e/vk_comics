@@ -111,7 +111,7 @@ def publish_photo_to_wall(token, owner_id, attachments, message):
 def main():
     load_dotenv()
     api_token = os.getenv('VK_ACCESS_TOKEN')
-    vk_group_id = int(os.getenv('VK_GROUP_NAME'))
+    vk_group_id = int(os.getenv('VK_GROUP_ID'))
 
     path_to_comics_file, xkcd_comics_comment = download_random_xkcd_comics()
 
