@@ -8,20 +8,21 @@ class VkResponseException(BaseException):
     pass
 
 
-def raise_for_error(response):
-    response.raise_for_status()
+def raise_for_error(response_data):
     try:
-        raise VkResponseException(response.json()['error']['error_code'], response.json()['error']['error_msg'])
+        raise VkResponseException(response_data['error']['error_code'], response_data['error']['error_msg'])
     except KeyError:
         pass
 
 
-def vk_request(http_method, vk_method, **kwargs):
+def request_vk_api(http_method, vk_method, **kwargs):
     api_url = f'https://api.vk.com/method/{vk_method}'
     response = getattr(requests, http_method)(api_url, **kwargs)
-    raise_for_error(response)
+    response.raise_for_status()
+    response_data = response.json()
+    raise_for_error(response_data)
 
-    return response.json()
+    return response_data
 
 
 def download_image(url):
@@ -46,9 +47,10 @@ def download_random_xkcd_comics():
     xkcb_url = f'https://xkcd.com/{rnd_page}/info.0.json'
     response = requests.get(url=xkcb_url)
     response.raise_for_status()
+    json_metadata = response.json()
 
-    image_url = response.json()['img']
-    comment = response.json()['alt']
+    image_url = json_metadata['img']
+    comment = json_metadata['alt']
 
     return download_image(url=image_url), comment
 
@@ -56,7 +58,7 @@ def download_random_xkcd_comics():
 def get_vk_groups(access_token):
     params = {'access_token': access_token,
               'v': '5.95'}
-    return vk_request('get', 'groups.get', params=params)
+    return request_vk_api('get', 'groups.get', params=params)
 
 
 def get_vk_walluploadserver(token, group_id):
@@ -66,7 +68,7 @@ def get_vk_walluploadserver(token, group_id):
         'group_id': group_id,
     }
 
-    return vk_request('get', 'photos.getWallUploadServer', params=params)['response']['upload_url']
+    return request_vk_api('get', 'photos.getWallUploadServer', params=params)['response']['upload_url']
 
 
 def upload_photo_to_vk_server(token, group_id, path_to_photo, caption):
@@ -76,8 +78,9 @@ def upload_photo_to_vk_server(token, group_id, path_to_photo, caption):
         files = {'photo': image_file}
         response = requests.post(url=upload_server, files=files)
 
-    raise_for_error(response)
+    response.raise_for_status()
     response_data = response.json()
+    raise_for_error(response_data)
 
     if not response_data['photo']:
         raise VkResponseException(0, 'Image upload error')
@@ -92,7 +95,7 @@ def upload_photo_to_vk_server(token, group_id, path_to_photo, caption):
         'caption': caption
     }
 
-    return vk_request('post', 'photos.saveWallPhoto', params=params)
+    return request_vk_api('post', 'photos.saveWallPhoto', params=params)
 
 
 def publish_photo_to_wall(token, owner_id, attachments, message):
@@ -105,7 +108,7 @@ def publish_photo_to_wall(token, owner_id, attachments, message):
         'owner_id': owner_id,
     }
 
-    return vk_request('post', 'wall.post', params=params)
+    return request_vk_api('post', 'wall.post', params=params)
 
 
 def main():
